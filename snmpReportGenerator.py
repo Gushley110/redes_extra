@@ -94,37 +94,70 @@ class SnmpReportGenerator:
                 '1.3.6.1.2.1.2',
             )
 
-    def getCpuInfo():
+    def getCpuInfo(self):
         return snmpQuery.snmpWalk(
                 self.agentInfo.snmpVersion,
                 self.agentInfo.community,
                 self.agentInfo.address,
                 self.agentInfo.port,
-                '1.3.6.1.2.1.2',
+                '1.3.6.1.2.1.25.3.3.1.2',
             )
 
-    def getRAMInfo():
+    def getRAMInfo(self):
         return snmpQuery.snmpWalk(
                 self.agentInfo.snmpVersion,
                 self.agentInfo.community,
                 self.agentInfo.address,
                 self.agentInfo.port,
-                '1.3.6.1.2.1.2',
+                '1.3.6.1.4.1.2021.4',
+            )
+
+    def getDiskInfo(self):
+        return snmpQuery.snmpWalk(
+                self.agentInfo.snmpVersion,
+                self.agentInfo.community,
+                self.agentInfo.address,
+                self.agentInfo.port,
+                '1.3.6.1.2.1.25.3.6.1',
+            )
+
+    def getDiskCapacities(self):
+        return snmpQuery.snmpWalk(
+                self.agentInfo.snmpVersion,
+                self.agentInfo.community,
+                self.agentInfo.address,
+                self.agentInfo.port,
+                '1.3.6.1.2.1.25.3.6.1.4',
             )
     
     def renderHTML(self):
         sysInfo = self.getAgentSysInfo()
         ifInfo = self.getInterfaceInfo()
+        raminfo = self.getRAMInfo()
+        cpuInfo = self.getCpuInfo()
+        diskInfo = self.getDiskInfo()
+        diskCapacities = self.getDiskCapacities()
 
         # This is just because I'm rushing
         sysDescr = sysInfo['1.3.6.1.2.1.1.1.0'].lower()
         numberInterfaces = ifInfo['1.3.6.1.2.1.2.1.0'].lower()
+        numberCpu = len(cpuInfo)
+        numberDisk = len(diskInfo) // 4
 
-        interface = []
+        interfaceIn = []
+        interfaceOut = []
+        cpuLoads = []
+        capacities = []
 
-        for i in range(numberInterfaces + 1):
-            interface[i] = ifInfo['1.3.6.1.2.1.2.2.1.10.' + i]
+        for i in range(1, int(numberInterfaces) + 1):
+            interfaceIn.append(ifInfo['1.3.6.1.2.1.2.2.1.10.' + str(i)])
+            interfaceOut.append(ifInfo['1.3.6.1.2.1.2.2.1.16.' + str(i)])
 
+        for load in cpuInfo.values():
+            cpuLoads.append(load)
+
+        for capacity in diskCapacities.values():
+            capacities.append(capacity)
 
         logo = 'mine.png' # Minecraft logo fallback for the memes.
         if 'windows' in sysDescr:
@@ -140,8 +173,13 @@ class SnmpReportGenerator:
                 agentSysContact = sysInfo['1.3.6.1.2.1.1.4.0'],
                 agentSysLocation = sysInfo['1.3.6.1.2.1.1.6.0'],
                 agentInterfaces = ifInfo['1.3.6.1.2.1.2.1.0'],
-                agentCPU = 
-                agentRAM = 
+                agentTraficIn = interfaceIn,
+                agentTraficOut = interfaceOut,
+                agentDisks = numberDisk,
+                agentDiskCapacity = capacities,
+                agentCpuCores = numberCpu,
+                agentCpuLoads = cpuLoads,
+                agentRAM = raminfo['1.3.6.1.4.1.2021.4.5.0']
             )
 
     
